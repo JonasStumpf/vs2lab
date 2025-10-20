@@ -1,0 +1,4 @@
+# fix line ending issues (windows has different line endings than unix (docker container) ->  git detects all files as changed)
+* text=auto eol=lf
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
