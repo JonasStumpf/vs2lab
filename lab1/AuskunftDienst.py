@@ -68,7 +68,7 @@ class Server:
                         break  # stop if client stopped
 
                     self._logger.info("Received data, sending response...")
-                    connection.send(self.getResponse(data.decode('ascii')).encode('ascii'))  # return sent response
+                    connection.send(self.getResponse(data.decode('utf-8')).encode('utf-8'))  # return sent response
                 
                 connection.close()  # close the connection
                 self._logger.info("Connection closed")
@@ -111,9 +111,9 @@ class Client:
         """ Call server """
         self.logger.info("Client called GET for name: %s", name)
 
-        self.sock.send(("GET " + name).encode('ascii'))  # send encoded string as data
+        self.sock.send(("GET " + name).encode('utf-8'))  # send encoded string as data
         data = self.sock.recv(1024)  # receive the response
-        msg_out = data.decode('ascii')
+        msg_out = data.decode('utf-8')
 
         if msg_out.startswith("ERROR"):
             self.logger.error("Error received from server: %s", msg_out)
@@ -131,9 +131,9 @@ class Client:
         """ Call server """
         self.logger.info("Client called GETALL")
 
-        self.sock.send(("GETALL").encode('ascii'))  # send encoded string as data
+        self.sock.send(("GETALL").encode('utf-8'))  # send encoded string as data
         data = self.sock.recv(1024)  # receive the response
-        msg_out = data.decode('ascii')
+        msg_out = data.decode('utf-8')
 
         if msg_out.startswith("ERROR"):
             self.logger.error("Error received from server: %s", msg_out)
