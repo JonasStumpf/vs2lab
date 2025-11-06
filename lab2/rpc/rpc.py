@@ -2,6 +2,8 @@ import constRPC
 
 from context import lab_channel
 
+import threading
+import time
 
 class DBList:
     def __init__(self, basic_list):
@@ -25,12 +27,29 @@ class Client:
     def stop(self):
         self.chan.leave('client')
 
-    def append(self, data, db_list):
+    def append(self, data, db_list, callback):
         assert isinstance(db_list, DBList)
+
         msglst = (constRPC.APPEND, data, db_list)  # message payload
-        self.chan.send_to(self.server, msglst)  # send msg to server
-        msgrcv = self.chan.receive_from(self.server)  # wait for response
-        return msgrcv[1]  # pass it to caller
+        
+        while True:
+            self.chan.send_to(self.server, msglst)  # send msg to server
+
+            sender, ackmsg = self.chan.receive_from(self.server)  # wait for ACK
+            if ackmsg == constRPC.ACK:
+                print("Client: ACK vom Server erhalten. Warte auf Ergebnis im Hintergrund...")
+                break
+        
+        def wait_for_result():
+            while True:
+                sender, resultmsg = self.chan.receive_from(self.server)
+                if resultmsg[0] == constRPC.OK:
+                    callback(resultmsg[1]) # Ergebnis per Callback liefern
+                    break
+
+        t = threading.Thread(target=wait_for_result)
+        t.start()
+        return None  # Ergebnis wird per Callback geliefert
 
 
 class Server:
@@ -52,7 +71,12 @@ class Server:
                 client = msgreq[0]  # see who is the caller
                 msgrpc = msgreq[1]  # fetch call & parameters
                 if constRPC.APPEND == msgrpc[0]:  # check what is being requested
+
+                    self.chan.send_to({client}, constRPC.ACK)  # send ACK
+                    time.sleep(10) # simulate processing time
+
                     result = self.append(msgrpc[1], msgrpc[2])  # do local call
-                    self.chan.send_to({client}, result)  # return response
+                    self.chan.send_to({client}, (constRPC.OK, result))  # return response
+
                 else:
                     pass  # unsupported request, simply ignore
