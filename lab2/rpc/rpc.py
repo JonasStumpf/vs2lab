@@ -43,9 +43,10 @@ class Client:
         def wait_for_result():
             while True:
                 sender, resultmsg = self.chan.receive_from(self.server)
-                if resultmsg[0] == constRPC.OK:
+                """ if resultmsg[0] == constRPC.OK:
                     callback(resultmsg[1]) # Ergebnis per Callback liefern
-                    break
+                    break """
+                callback(resultmsg[1]) # Ergebnis per Callback liefern
 
         t = threading.Thread(target=wait_for_result)
         t.start()
