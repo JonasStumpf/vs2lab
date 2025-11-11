@@ -4,6 +4,7 @@ import sys
 import zmq
 import time
 import constPipe
+import json
 
 
 id = str(sys.argv[1]) if len(sys.argv) > 1 else "1"
@@ -35,6 +36,7 @@ while True:
         if stopLeft <= 0:
             print(f"{name} received all stop codes and is exiting")
             break
+        continue
 
     word = work[1]
     words[word] = words.get(word, 0) + 1
@@ -42,4 +44,6 @@ while True:
     print(f"{name} current counts for {word}: {words[word]}")
 
 
-print(f"{name} final word counts: {words}")
+# Einfach das Dictionary formatiert ausgeben
+print(f"{name} final word counts:")
+print(json.dumps(words, indent=2, ensure_ascii=False, sort_keys=True))

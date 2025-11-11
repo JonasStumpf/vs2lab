@@ -4,6 +4,7 @@ import sys
 import zmq
 import time
 import constPipe
+import string
 
 id = str(sys.argv[1]) if len(sys.argv) > 1 else "1"
 name = "mapper_" + id
@@ -50,5 +51,5 @@ while True:
         else:
             id = 0
         
-        push_sockets[id].send(pickle.dumps((name, word)))
+        push_sockets[id].send( pickle.dumps( (name, word.strip(string.punctuation)) ) )
 

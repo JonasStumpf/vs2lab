@@ -46,9 +46,9 @@ for i in range(1, constPipe.NUM_REDUCERS + 1):
         "problemMatcher": []
     })
 
-# Meta-Task: Run All parallel
+# Meta-Task: Run WordCount
 tasks.append({
-    "label": "Run All",
+    "label": "Run WordCount",
     "dependsOn": [t["label"] for t in tasks],
     "dependsOrder": "parallel"
 })
