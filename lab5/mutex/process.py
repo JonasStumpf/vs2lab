@@ -2,7 +2,7 @@ import logging
 import random
 import time
 
-from constMutex import ENTER, RELEASE, ALLOW, ACTIVE
+from constMutex import ENTER, RELEASE, ALLOW, ACTIVE, ALIVE
 
 
 class Process:
@@ -92,8 +92,7 @@ class Process:
         processes_with_later_message = set([req[1] for req in self.queue[1:]])
         # Access granted if this process is first in queue and all others have answered (logically) later
         first_in_queue = self.queue[0][1] == self.process_id
-        all_have_answered = len(self.other_processes) == len(
-            processes_with_later_message)
+        all_have_answered = len(self.other_processes) == len(processes_with_later_message)
         return first_in_queue and all_have_answered
 
     def __receive(self):
@@ -121,15 +120,47 @@ class Process:
                 # assure release requester indeed has access (his ENTER is first in queue)
                 assert self.queue[0][1] == msg[1] and self.queue[0][2] == ENTER, 'State error: inconsistent remote RELEASE'
                 del (self.queue[0])  # Just remove first message
+            elif msg[2] == ALIVE:
+                self.__send_alive()
+                self.__receive_alives(msg[1])
 
             self.__cleanup_queue()  # Finally sort and cleanup the queue
         else:
-            self.logger.info("{} timed out on RECEIVE. Local queue: {}".
-                             format(self.__mapid(),
-                                    list(map(lambda msg: (
-                                        'Clock '+str(msg[0]),
-                                        self.__mapid(msg[1]),
-                                        msg[2]), self.queue))))
+            self.logger.info("{} timed out on RECEIVE. Local queue: {}".format(self.__mapid(), list(map(lambda msg: ('Clock '+str(msg[0]), self.__mapid(msg[1]), msg[2]), self.queue))))
+            # Timeout occurred; no message received; others still alive?
+            self.__send_alive()
+            self.__receive_alives()
+
+
+    def __receive_alives(self, sender_id=None):
+        self.logger.info("{} waiting for ALIVE messages.".format(self.__mapid()))
+        if sender_id: self.logger.info("{} received ALIVE from {}.".format(self.__mapid(), sender_id))
+        
+        alive_processes = set(sender_id) if sender_id else set()
+        # wait for alives from all other processes
+        timeout_counter = 3
+        while len(alive_processes) < len(self.other_processes) and timeout_counter > 0:
+            _receive = self.channel.receive_from(self.other_processes, 3)
+            if _receive:
+                msg = _receive[1]
+                self.logger.info("{} received ALIVE from {}.".format(self.__mapid(), msg[1]))
+                alive_processes.add(msg[1])
+            else:
+                timeout_counter -= 1
+        
+        # Remove unresponsive processes from all_processes and other_processes
+        unresponsive_processes = set(self.other_processes) - alive_processes
+        for proc in unresponsive_processes:
+            self.all_processes.remove(proc)
+            self.other_processes.remove(proc)
+
+        self.logger.info("{} removed unresponsive processes: {}.".format(self.__mapid(), list(map(lambda id: self.__mapid(id), unresponsive_processes))))
+
+    def __send_alive(self):
+        self.logger.info("{} sending ALIVE message.".format(self.__mapid()))
+        self.clock = self.clock + 1  # Increment clock value
+        msg = (self.clock, self.process_id, ALIVE)
+        self.channel.send_to(self.other_processes, msg)  # Send alive message
 
     def init(self, peer_name, peer_type):
         self.channel.bind(self.process_id)
