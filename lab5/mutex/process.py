@@ -138,7 +138,7 @@ class Process:
         
         alive_processes = set(sender_id) if sender_id else set()
         # wait for alives from all other processes
-        timeout_counter = 3
+        timeout_counter = 1
         while len(alive_processes) < len(self.other_processes) and timeout_counter > 0:
             _receive = self.channel.receive_from(self.other_processes, 3)
             if _receive:
