@@ -53,6 +53,7 @@ class Participant:
         #Phase 1b
         # Wait for start of joint commit
         msg = self.channel.receive_from(self.coordinator, TIMEOUT)
+        decision = ""
 
         if not msg:  # Crashed coordinator - give up entirely
             # decide to locally abort (before doing anything)
@@ -141,7 +142,7 @@ class Participant:
                 self.channel.send_to({msg[0]}, decision) """
 
 
-        return "Participant {} terminated in state {}.".format(self.participant, self.state)
+        return "Participant {} terminated in state {}. Local Decission {}".format(self.participant, self.state, decision)
     
 
     def handleCoordinatorCrash(self):
@@ -170,16 +171,18 @@ class Participant:
             # decide new global state
             if self.state == 'ABORT' or self.state == 'COMMIT':
                 return # already decided and synced
-            elif 'ABORT' in states:
+            elif self.state == 'WAIT': #'ABORT' in states or
                 self._enter_state('ABORT')
                 self.channel.send_to(self.all_participants, GLOBAL_ABORT)
-            elif all(s in ['PRECOMMIT', 'COMMIT', 'READY'] for s in states):
+            else: #if all(s in ['PRECOMMIT', 'COMMIT', 'READY'] for s in states):
                 self._enter_state('COMMIT')
                 self.channel.send_to(self.all_participants, GLOBAL_COMMIT)
 
 
         else: # wait for new coordinator messages
             msg = self.channel.receive_from(self.coordinator, TIMEOUT * 2)
+            if not msg: # if global commit reaches just a few participants
+                self.handleCoordinatorCrash()
 
             coordinator_state = msg[1]
 
